@@ -89,7 +89,7 @@ async function connects() {
                                         //     await bot.equip(PlaceItem, 'hand')
                                         //     await bot.placeBlock(bot.blockAt(placeVec), new vec3(0, 1, 0))
                                         // }
-                                        await new Promise(r => setTimeout(r, 500))
+                                        await new Promise(r => setTimeout(r, 100))
                                     } catch (e) {
                                         cl(e)
                                     }
