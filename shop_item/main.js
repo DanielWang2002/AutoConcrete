@@ -30,7 +30,7 @@ function connects() {
         const bot = mineflayer.createBot(_opts)
 
         bot.once('spawn', () => {
-            mcData = require('minecraft-data')(bot.version)
+            let mcData = require('minecraft-data')(bot.version)
         })
 
         bot.on("message", async function (jsonMsg) {
