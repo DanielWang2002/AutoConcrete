@@ -63,20 +63,39 @@ async function connects() {
                         case "start":
 
                             try {
+                                await LoadNBTFile('willsmith.nbt')
 
                                 await bot.creative.startFlying()
-                                cl(`起飛!`)
+
                                 let mapart_map = await getItemNameMap(blocks, palette)
+                                // bot位置
                                 let original_position = bot.entity.position
 
-                                let test_vec = 0
                                 for (let [i, j] of mapart_map) {
-                                    let ToMoveVec = new vec3(original_position.offset(i[0], i[1], i[2]))
-                                    // let ToMoveVec = new vec3(original_position.offset(test_vec,0,0))
-                                    await bot.creative.flyTo(ToMoveVec)
-                                    cl(`Now Vec3: ${ToMoveVec}`)
-                                    test_vec += 1
-                                    await new Promise(r => setTimeout(r, 100))
+                                    try {
+                                        let itemname = j.split(':')[1]
+
+                                        // 目標地點
+                                        let ToMoveVec = new vec3(original_position.plus(new vec3(i[0], i[1], i[2])))
+                                        // 要放方塊的位置(飛行目標地點y-2)
+                                        let placeVec = new vec3(original_position.plus(new vec3(i[0], i[1] - 2, i[2])))
+
+                                        // 飛到目標地點
+                                        await bot.creative.flyTo(ToMoveVec)
+                                        cl(` Now Vec3: ${ToMoveVec}`)
+
+                                        // let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[itemname].id, null, false)
+                                        // if (PlaceItem != null) {
+                                        //     await bot.equip(PlaceItem, 'hand')
+                                        //     await bot.placeBlock(bot.blockAt(placeVec), new vec3(0, 1, 0))
+                                        // }
+                                        await new Promise(r => setTimeout(r, 500))
+                                    } catch (e) {
+                                        cl(e)
+                                    }
+
+
+                                    // await new Promise(r => setTimeout(r, 100))
                                 }
 
                                 break
@@ -104,7 +123,17 @@ async function connects() {
                             break
 
                         case "test":
-                            console.log(bot.physics)
+                            await LoadNBTFile('willsmith.nbt')
+
+                            await bot.creative.startFlying()
+
+                            let mapart_map = await getItemNameMap(blocks, palette)
+
+
+                            for (let [i, j] of mapart_map) {
+                                cl(i)
+                                await new Promise(r => setTimeout(r, 300))
+                            }
 
                             break
                     }
