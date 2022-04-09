@@ -5,10 +5,6 @@ let request = require('request-promise');
 const tokens = require('prismarine-tokens-fixed');  //讀取prismarine-tokens-fixed(驗證緩存)模塊
 const vec3 = require('vec3')
 
-/*
-TODO: - [系統] 你身上沒有足夠的空間換取此物品。 請空出足夠的空間。
- */
-
 const whitelist = config.whitelist
 let isCommandStop = false
 let stopClickWindow = false

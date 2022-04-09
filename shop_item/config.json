@@ -1,7 +1,7 @@
 {
   "key": "L6KN-GXND-IUPB-W6FG-PCLN",
   "username": "DanielBot_01",
-  "ip": "mcfallout.net",
+  "ip": "sg.mcfallout.net",
   "auth": "microsoft",
-  "whitelist": ["DanielWang_", "sausage__"]
+  "whitelist": ["DanielWang_"]
 }
