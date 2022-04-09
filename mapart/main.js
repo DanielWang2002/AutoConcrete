@@ -20,7 +20,8 @@ let palette
 let blocks
 
 let opt = {
-    host: config.ip,
+    // host: config.ip,
+    host: "localhost",
     auth: config.auth,
     username: config.username,
     // tokensLocation: './bot_tokens.json',
@@ -35,6 +36,9 @@ async function connects() {
         const bot = mineflayer.createBot(_opts)
 
         bot.loadPlugin(pathfinder)
+
+        // bot.entity.velocity = new vec3(100,100,100)
+        // 待測試
 
         bot.once('spawn', () => {
 
@@ -67,12 +71,14 @@ async function connects() {
 
                                 await bot.creative.startFlying()
 
+                                // [座標相對位置, 材料名稱]
                                 let mapart_map = await getItemNameMap(blocks, palette)
                                 // bot位置
                                 let original_position = bot.entity.position
 
                                 for (let [i, j] of mapart_map) {
                                     try {
+                                        // 材料方塊名稱
                                         let itemname = j.split(':')[1]
 
                                         // 目標地點
@@ -84,6 +90,7 @@ async function connects() {
                                         await bot.creative.flyTo(ToMoveVec)
                                         cl(` Now Vec3: ${ToMoveVec}`)
 
+                                        // 放置方塊
                                         // let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[itemname].id, null, false)
                                         // if (PlaceItem != null) {
                                         //     await bot.equip(PlaceItem, 'hand')
@@ -151,6 +158,53 @@ async function connects() {
                     bot.chat(`/tno`)
                 }
 
+            }
+            try {
+                await LoadNBTFile('white.nbt')
+                await bot.creative.startFlying()
+
+                // [座標相對位置, 材料名稱]
+                let mapart_map = await getItemNameMap(blocks, palette)
+
+                // let a = parseFloat(jsonMsg.toString().split(" ")[1])
+                // cl(`1 ${bot.entity.position}`)
+                // bot.entity.velocity = new vec3 (0, 0, a)
+                // cl(bot.entity)
+                // await new Promise(r => setTimeout(r, 1000))
+                // cl(`2 ${bot.entity.position}`)
+                for (let [i, j] of mapart_map) {
+                    try {
+                        // 材料方塊名稱
+                        let itemname = j.split(':')[1]
+                        // 目前地點
+                        let now_position = bot.entity.position
+                        // 要放方塊的位置(飛行目標地點y-2)
+                        // let placeVec = new vec3(original_position.plus(new vec3(i[0], i[1], i[2])))
+
+                        let new_position = now_position.plus(new vec3(i[0], 0, i[2]))
+                        // 飛到目標地點
+                        bot.entity.velocity = new_position.minus(now_position)
+                        cl(bot.entity.velocity)
+                        // cl(`x: ${i[0]} y: ${i[1]} z: ${i[2]}`)
+                        // await bot.creative.flyTo(ToMoveVec)
+
+                        // 放置方塊
+                        // let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[itemname].id, null, false)
+                        // if (PlaceItem != null) {
+                        //     cl("現在座標" + bot.entity.position)
+                        //     await bot.equip(PlaceItem, 'hand')
+                        //     await bot.placeBlock(bot.blockAt(ToMoveVec), new vec3(0, -1, 0))
+                        // }
+                        await new Promise(r => setTimeout(r, 300))
+                    } catch (e) {
+                        cl(e)
+                    }
+
+
+                    // await new Promise(r => setTimeout(r, 100))
+                }
+            } catch (err) {
+                console.log(`發生錯誤: ${err}`)
             }
         })
 
