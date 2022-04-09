@@ -50,7 +50,7 @@ async function connects() {
         bot.on("message", async function (jsonMsg) {
             try {
                 if (!jsonMsg.toString().includes("test")) return
-                await LoadNBTFile('white.nbt')
+                await LoadNBTFile('mapart.nbt')
                 await bot.creative.flyTo(bot.entity.position.plus(new vec3(0, 2, 0)))
 
                 // [座標相對位置, 材料名稱]
@@ -81,20 +81,10 @@ async function connects() {
 
                             for (let k = 0; k > -5; k--) {
                                 let target_block = bot.blockAt(new_position.minus(new vec3(k, 4, 0)))
-                                // console.log(i)
-                                // console.log([i[0] + k, i[1], i[2]])
-                                console.log(i)
-                                console.log([0,2,0])
-                                console.log([0,2,0] == i)
-                                console.log([0,2,0] === i)
 
-                                /*
-                                判斷target座標需要放的方塊名稱是不是跟itemname一樣
-                                 */
+                                let target_block_name = await getMapValue(mapart_map, [i[0] + (-k), i[1], i[2]])
 
-                                // console.log(mapart_map.get([0, 0, 0]))
-                                // console.log(itemname)
-                                if (target_block.name === itemname) {
+                                if ((target_block_name === itemname) && (bot.blockAt(target_block.position).name === 'air')) {
                                     await bot.placeBlock(target_block, new vec3(0, 1, 0))
                                 }
                             }
@@ -129,6 +119,14 @@ async function connects() {
 
 function cl(msg) {
     console.log(getDateTime() + msg)
+}
+
+async function getMapValue(map, ar) {
+    for (let [i, k] of map) {
+        if ((i[0] === ar[0]) && (i[1] === ar[1]) && (i[2] === ar[2])) {
+            return map.get(i).toString().split(":")[1]
+        }
+    }
 }
 
 function getDateTime() {

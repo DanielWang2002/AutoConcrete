@@ -63,33 +63,53 @@ async function connects() {
                         case "start":
 
                             try {
+
                                 await LoadNBTFile('willsmith.nbt')
+                                await bot.creative.flyTo(bot.entity.position.plus(new vec3(0, 2, 0)))
 
-                                await bot.creative.startFlying()
-
+                                // [座標相對位置, 材料名稱]
                                 let mapart_map = await getItemNameMap(blocks, palette)
-                                // bot位置
-                                let original_position = bot.entity.position
+                                // 第一個相對位置
+                                let previous_pos
+                                for (let [i, j] of mapart_map) {
+                                    previous_pos = new vec3(i)
+                                    break
+                                }
 
                                 for (let [i, j] of mapart_map) {
                                     try {
+                                        // 材料方塊名稱
                                         let itemname = j.split(':')[1]
+                                        // 目前地點
+                                        let now_position = bot.entity.position
+                                        let new_position = now_position.plus((new vec3(i).minus(previous_pos))).floor()
+                                        previous_pos = new vec3(i)
 
-                                        // 目標地點
-                                        let ToMoveVec = new vec3(original_position.plus(new vec3(i[0], i[1], i[2])))
-                                        // 要放方塊的位置(飛行目標地點y-2)
-                                        let placeVec = new vec3(original_position.plus(new vec3(i[0], i[1] - 2, i[2])))
+                                        await bot.creative.flyTo(new_position)
 
-                                        // 飛到目標地點
-                                        await bot.creative.flyTo(ToMoveVec)
-                                        cl(` Now Vec3: ${ToMoveVec}`)
+                                        // 放置方塊
+                                        let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[itemname].id, null, false)
+                                        if (PlaceItem != null) {
 
-                                        // let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[itemname].id, null, false)
-                                        // if (PlaceItem != null) {
-                                        //     await bot.equip(PlaceItem, 'hand')
-                                        //     await bot.placeBlock(bot.blockAt(placeVec), new vec3(0, 1, 0))
-                                        // }
-                                        await new Promise(r => setTimeout(r, 100))
+                                            await bot.equip(PlaceItem, 'hand')
+
+                                            for (let k = 0; k > -3; k--) {
+                                                let target_block = bot.blockAt(new_position.minus(new vec3(k, 4, 0)))
+
+                                                let target_block_name = await getMapValue(mapart_map, [i[0] + (-k), i[1], i[2]])
+
+                                                if ((target_block_name === itemname) && (bot.blockAt(target_block.position).name === 'air')) {
+                                                    await bot.placeBlock(target_block, new vec3(0, 1, 0))
+                                                }
+                                            }
+
+                                        }
+                                        /*
+                                        1.到材料區拿材料盒子內物品(全拿)
+                                        2.跑一遍所有座標 放置(包含放置的格子+2格)
+                                        3.如果跑完所有座標 身上物品還有 那就拿到指定位置放置(代表是多的)
+                                        4.如果沒跑完 身上物品就沒了 代表物品不夠 回去再拿一盒
+                                         */
                                     } catch (e) {
                                         cl(e)
                                     }
@@ -97,8 +117,6 @@ async function connects() {
 
                                     // await new Promise(r => setTimeout(r, 100))
                                 }
-
-                                break
                             } catch (err) {
                                 console.log(`發生錯誤: ${err}`)
                             }
@@ -123,17 +141,9 @@ async function connects() {
                             break
 
                         case "test":
-                            await LoadNBTFile('willsmith.nbt')
-
-                            await bot.creative.startFlying()
-
-                            let mapart_map = await getItemNameMap(blocks, palette)
-
-
-                            for (let [i, j] of mapart_map) {
-                                cl(i)
-                                await new Promise(r => setTimeout(r, 300))
-                            }
+                            bot.chat(`/cgm`)
+                            await new Promise(r => setTimeout(r, 500))
+                            bot.chat(`/cgm`)
 
                             break
                     }
@@ -169,6 +179,18 @@ async function connects() {
 
 function cl(msg) {
     console.log(getDateTime() + msg)
+}
+
+async function getMapValue(map, ar) {
+    for (let [i, k] of map) {
+        if ((i[0] === ar[0]) && (i[1] === ar[1]) && (i[2] === ar[2])) {
+            return map.get(i).toString().split(":")[1]
+        }
+    }
+}
+
+async function takeMaterial(bot, material_name) {
+
 }
 
 function getDateTime() {
