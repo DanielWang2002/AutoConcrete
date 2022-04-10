@@ -43,6 +43,7 @@ async function connects() {
         bot.once('spawn', () => {
 
             mcData = require('minecraft-data')(bot.version)
+            console.log(bot)
 
         })
 

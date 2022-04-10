@@ -18,6 +18,10 @@ const whitelist = config.whitelist
 let mcData
 let palette
 let blocks
+let took_item
+let isEnd = false
+let original_position // start的地點
+let hasDisconnected = false
 
 let opt = {
     host: config.ip,
@@ -67,6 +71,8 @@ async function connects() {
                                 await LoadNBTFile('willsmith.nbt')
                                 await bot.creative.flyTo(bot.entity.position.plus(new vec3(0, 2, 0)))
 
+                                original_position = bot.entity.position
+
                                 // [座標相對位置, 材料名稱]
                                 let mapart_map = await getItemNameMap(blocks, palette)
                                 // 第一個相對位置
@@ -76,47 +82,19 @@ async function connects() {
                                     break
                                 }
 
-                                for (let [i, j] of mapart_map) {
-                                    try {
-                                        // 材料方塊名稱
-                                        let itemname = j.split(':')[1]
-                                        // 目前地點
-                                        let now_position = bot.entity.position
-                                        let new_position = now_position.plus((new vec3(i).minus(previous_pos))).floor()
-                                        previous_pos = new vec3(i)
 
-                                        await bot.creative.flyTo(new_position)
-
-                                        // 放置方塊
-                                        let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[itemname].id, null, false)
-                                        if (PlaceItem != null) {
-
-                                            await bot.equip(PlaceItem, 'hand')
-
-                                            for (let k = 0; k > -3; k--) {
-                                                let target_block = bot.blockAt(new_position.minus(new vec3(k, 4, 0)))
-
-                                                let target_block_name = await getMapValue(mapart_map, [i[0] + (-k), i[1], i[2]])
-
-                                                if ((target_block_name === itemname) && (bot.blockAt(target_block.position).name === 'air')) {
-                                                    await bot.placeBlock(target_block, new vec3(0, 1, 0))
-                                                }
-                                            }
-
-                                        }
-                                        /*
-                                        1.到材料區拿材料盒子內物品(全拿)
-                                        2.跑一遍所有座標 放置(包含放置的格子+2格)
-                                        3.如果跑完所有座標 身上物品還有 那就拿到指定位置放置(代表是多的)
-                                        4.如果沒跑完 身上物品就沒了 代表物品不夠 回去再拿一盒
-                                         */
-                                    } catch (e) {
-                                        cl(e)
-                                    }
+                                // 拿材料
+                                await bot.chat(`/warp ${settings.Material_Warp}`)
+                                // 等待10秒 避免網路不好的情況導致延遲
+                                await new Promise(r => setTimeout(r, 5000))
+                                await takeMaterial(bot, userID)
+                                await bot.chat(`/back`)
+                                await new Promise(r => setTimeout(r, 5000))
 
 
-                                    // await new Promise(r => setTimeout(r, 100))
-                                }
+                                // 開始蓋
+                                await building(bot, mapart_map, previous_pos, userID)
+
                             } catch (err) {
                                 console.log(`發生錯誤: ${err}`)
                             }
@@ -140,11 +118,17 @@ async function connects() {
 
                             break
 
-                        case "test":
-                            bot.chat(`/cgm`)
-                            await new Promise(r => setTimeout(r, 500))
-                            bot.chat(`/cgm`)
+                        case "cgm":
+                            await cgm(bot)
+                            break
 
+                        case "test":
+                            await bot.chat(`/warp ${settings.Material_Warp}`)
+                            // 等待10秒 避免網路不好的情況導致延遲
+                            await new Promise(r => setTimeout(r, 5000))
+                            await takeMaterial(bot, userID)
+                            await bot.chat(`/back`)
+                            await new Promise(r => setTimeout(r, 5000))
                             break
                     }
                 }
@@ -167,6 +151,7 @@ async function connects() {
         bot.on('kicked', console.log)
         bot.on('error', console.log)
         bot.on('end', () => {
+            hasDisconnected = true
             console.log(getDateTime())
             console.log(`連線中斷，將在5秒後嘗試重新連接伺服器！`)
             setTimeout(function () {
@@ -189,7 +174,186 @@ async function getMapValue(map, ar) {
     }
 }
 
-async function takeMaterial(bot, material_name) {
+async function cgm(bot) {
+    bot.chat(`/cgm`)
+    await new Promise(r => setTimeout(r, 500))
+    bot.chat(`/cgm`)
+    await new Promise(r => setTimeout(r, 500))
+}
+
+async function takeMaterial(bot, userID) {
+
+    try {
+
+        const sm = settings.MaterialBox
+        const position_of_material = new vec3(sm[0], sm[1], sm[2])
+        let block = bot.blockAt(position_of_material)
+
+        if (block.name === 'air') {
+            isEnd = true
+            return
+        }
+
+        let MaterialBox = await bot.openChest(block)
+        let took_item_count = 0
+        let took_item_name
+        let took_item_type
+
+        if (MaterialBox.containerItems().length !== 0) {
+
+            try {
+                for (let item of MaterialBox.containerItems()) {
+                    took_item_count += item.count
+                    took_item_name = item.name
+                    took_item_type = item.type
+                    took_item = item
+                }
+                await MaterialBox.withdraw(took_item_type, null, took_item_count)
+                await MaterialBox.close()
+                bot.chat(`/m ${userID} 已拿取 ${took_item_name} x${took_item_count}`)
+
+            } catch (error) {
+                cl(`拿取材料時發生錯誤: ${error}`)
+            }
+
+        } else {
+            bot.chat(`/m ${userID} 材料盒為空，請檢查！`)
+        }
+
+    } catch (error) {
+        cl(`拿取材料時發生錯誤: ${error}`)
+    }
+
+}
+
+async function depositMaterial(bot, userID) {
+    try {
+
+        const sem = settings.extraMaterialBox
+        const position_of_extraMaterialBox = new vec3(sem[0], sem[1], sem[2])
+        let block = bot.blockAt(position_of_extraMaterialBox)
+
+        let chest = await bot.openChest(block)
+        let item_name
+        let item_count = 0
+        let item_type
+
+        for (let item of bot.inventory.items()) {
+            item_type = item.type
+            item_name = item.name
+            item_count += item.count
+        }
+
+        await chest.deposit(item_type, null, item_count)
+        bot.chat(`/m ${userID} 已將多餘的 ${item_name} x${item_count} 放置到容器裡`)
+        await chest.close()
+    } catch (error) {
+        cl(`放置多於材料時發生錯誤: ${error}`)
+    }
+}
+
+async function building(bot, mapart_map, previous_pos, userID) {
+
+    await cgm(bot)
+    let now_position = bot.entity.position
+
+    for (let [i, j] of mapart_map) {
+        try {
+
+            // 目前地點
+
+            let new_position = now_position.plus((new vec3(i).minus(previous_pos))).floor()
+            previous_pos = new vec3(i)
+
+            now_position = new_position
+
+            // 將takeMaterial的材料拿到手上
+            let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[took_item.name].id, null, false)
+
+            if (PlaceItem != null) {
+
+                await bot.equip(PlaceItem, 'hand')
+
+
+                // bot.blockAt(new_position.minus(new vec3(0, 4, 0))) 為air 才進入迴圈
+                // TODO: - getMapValue === took_item.name
+                //       - 在k迴圈內如手上為空，takeMaterial()
+                if ((bot.blockAt(new_position.minus(new vec3(0, 4, 0))).name === 'air') && (await getMapValue(mapart_map, [i[0], i[1], i[2]]) === took_item.name)) {
+                    for (let k = 0; k > -3; k--) {
+
+                        // 確保手上一定有方塊
+                        bot.inventory.findInventoryItem(mcData.itemsByName[took_item.name].id, null, false)
+
+                        let target_block = bot.blockAt(new_position.minus(new vec3(k, 4, 0)))
+
+                        let target_block_name = await getMapValue(mapart_map, [i[0] + (-k), i[1], i[2]])
+
+                        if ((target_block_name === took_item.name) && (bot.blockAt(target_block.position).name === 'air')) {
+
+                            await bot.creative.flyTo(new_position)
+                            await bot.placeBlock(target_block, new vec3(0, 1, 0))
+
+                        }
+
+                    }
+                }
+
+            } else {
+
+                await bot.chat(`/warp ${settings.Material_Warp}`)
+                // 等待10秒 避免網路不好的情況導致延遲
+                await new Promise(r => setTimeout(r, 5000))
+                await takeMaterial(bot, userID)
+                await bot.chat(`/back`)
+                await new Promise(r => setTimeout(r, 5000))
+
+
+            }
+            /*
+            1.到材料區拿材料盒子內物品(全拿)
+            2.跑一遍所有座標 放置(包含放置的格子+2格)
+            3.如果跑完所有座標 身上物品還有 那就拿到指定位置放置(代表是多的)
+            4.如果沒跑完 身上物品就沒了 代表物品不夠 回去再拿一盒
+             */
+        } catch (error) {
+            cl(`建造地圖畫時發生錯誤: ${error}`)
+        }
+
+
+        await new Promise(r => setTimeout(r, 50))
+    }
+
+    // 跑完所有座標 身上還有物品 代表是多的 拿到指定位置放置
+    let bot_inv_items_count = 0
+    for (let item of bot.inventory.items()) {
+        bot_inv_items_count += item.count
+    }
+
+    if (bot_inv_items_count > 0) {
+
+        try {
+            await bot.chat(`/warp ${settings.Material_Warp}`)
+            // 等待5秒 避免網路不好的情況導致延遲
+            await new Promise(r => setTimeout(r, 5000))
+            await depositMaterial(bot, userID)
+            await new Promise(r => setTimeout(r, 5000))
+            await takeMaterial(bot, userID)
+            await new Promise(r => setTimeout(r, 2000))
+
+        } catch (error) {
+            cl(`放置多於材料時發生錯誤: ${error}`)
+        }
+
+    }
+
+    if (isEnd) {
+        cl(`地圖畫已完成!`)
+        bot.chat(`/m ${userID} 地圖畫已完成!`)
+    } else {
+        await cgm()
+        await bot.creative.flyTo(original_position)
+        await building(bot, mapart_map, previous_pos, userID)
+    }
 
 }
 
