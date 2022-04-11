@@ -69,9 +69,10 @@ async function connects() {
                             try {
 
                                 await LoadNBTFile('willsmith.nbt')
-                                await bot.creative.flyTo(bot.entity.position.plus(new vec3(0, 2, 0)))
-
                                 original_position = bot.entity.position
+                                // await bot.creative.flyTo(bot.entity.position.plus(new vec3(0, 2, 0)))
+                                await bot.creative.startFlying()
+
 
                                 // [座標相對位置, 材料名稱]
                                 let mapart_map = await getItemNameMap(blocks, palette)
@@ -92,8 +93,10 @@ async function connects() {
                                 await new Promise(r => setTimeout(r, 5000))
 
 
+                                let new_m = await getMapof_InameANDPos()
+
                                 // 開始蓋
-                                await building(bot, mapart_map, previous_pos, userID)
+                                await building(bot, mapart_map, previous_pos, userID, new_m)
 
                             } catch (err) {
                                 console.log(`發生錯誤: ${err}`)
@@ -252,76 +255,83 @@ async function depositMaterial(bot, userID) {
     }
 }
 
-async function building(bot, mapart_map, previous_pos, userID) {
+async function building(bot, mapart_map, previous_pos, userID, new_m) {
 
     await cgm(bot)
     let now_position = bot.entity.position
 
-    for (let [i, j] of mapart_map) {
-        try {
+    for (let [name, pos] of new_m) {
 
-            // 目前地點
+        // 材料盒拿的物品與當前座標ARRAY的物品相同
+        if (name === took_item.name) {
 
-            let new_position = now_position.plus((new vec3(i).minus(previous_pos))).floor()
-            previous_pos = new vec3(i)
+            // i = 材料name的每一座標
+            for (let i of pos) {
+                try {
 
-            now_position = new_position
+                    // 目前地點
+                    // let new_position = now_position.plus((new vec3(i).minus(previous_pos))).floor()
+                    // previous_pos = new vec3(i)
+                    //
+                    // now_position = new_position
 
-            // 將takeMaterial的材料拿到手上
-            let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[took_item.name].id, null, false)
+                    let new_position = original_position.plus(new vec3(i).floor()).minus(new vec3(0, 2, 0))
 
-            if (PlaceItem != null) {
+                    // 將takeMaterial的材料拿到手上
+                    let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[took_item.name].id, null, false)
 
-                await bot.equip(PlaceItem, 'hand')
+                    if (PlaceItem != null) {
 
+                        await bot.equip(PlaceItem, 'hand')
 
-                // bot.blockAt(new_position.minus(new vec3(0, 4, 0))) 為air 才進入迴圈
-                // TODO: - getMapValue === took_item.name
-                //       - 在k迴圈內如手上為空，takeMaterial()
-                if ((bot.blockAt(new_position.minus(new vec3(0, 4, 0))).name === 'air') && (await getMapValue(mapart_map, [i[0], i[1], i[2]]) === took_item.name)) {
-                    for (let k = 0; k > -3; k--) {
+                        if ((bot.blockAt(new_position.minus(new vec3(0, 4, 0))).name === 'air') && (await getMapValue(mapart_map, [i[0], i[1], i[2]]) === took_item.name)) {
 
-                        // 確保手上一定有方塊
-                        bot.inventory.findInventoryItem(mcData.itemsByName[took_item.name].id, null, false)
+                            for (let k = 0; k > -3; k--) {
+                                bot.inventory.findInventoryItem(mcData.itemsByName[took_item.name].id, null, false)
 
-                        let target_block = bot.blockAt(new_position.minus(new vec3(k, 4, 0)))
+                                let target_block = bot.blockAt(new_position.minus(new vec3(k, 4, 0)))
 
-                        let target_block_name = await getMapValue(mapart_map, [i[0] + (-k), i[1], i[2]])
+                                let target_block_name = await getMapValue(mapart_map, [i[0] + (-k), i[1], i[2]])
 
-                        if ((target_block_name === took_item.name) && (bot.blockAt(target_block.position).name === 'air')) {
+                                if ((target_block_name === took_item.name) && (bot.blockAt(target_block.position).name === 'air')) {
 
-                            await bot.creative.flyTo(new_position)
-                            await bot.placeBlock(target_block, new vec3(0, 1, 0))
+                                    await bot.creative.flyTo(new_position)
+                                    await bot.placeBlock(target_block, new vec3(0, 1, 0))
+
+                                }
+                            }
 
                         }
 
+
+                    } else {
+
+                        await bot.chat(`/warp ${settings.Material_Warp}`)
+                        // 等待10秒 避免網路不好的情況導致延遲
+                        await new Promise(r => setTimeout(r, 5000))
+                        await takeMaterial(bot, userID)
+                        await bot.chat(`/back`)
+                        await new Promise(r => setTimeout(r, 5000))
+
+
                     }
+                    /*
+                    1.到材料區拿材料盒子內物品(全拿)
+                    2.跑一遍所有座標 放置(包含放置的格子+2格)
+                    3.如果跑完所有座標 身上物品還有 那就拿到指定位置放置(代表是多的)
+                    4.如果沒跑完 身上物品就沒了 代表物品不夠 回去再拿一盒
+                     */
+                } catch (error) {
+                    cl(`建造地圖畫時發生錯誤: ${error}`)
                 }
 
-            } else {
-
-                await bot.chat(`/warp ${settings.Material_Warp}`)
-                // 等待10秒 避免網路不好的情況導致延遲
-                await new Promise(r => setTimeout(r, 5000))
-                await takeMaterial(bot, userID)
-                await bot.chat(`/back`)
-                await new Promise(r => setTimeout(r, 5000))
-
-
+                await new Promise(r => setTimeout(r, 50))
             }
-            /*
-            1.到材料區拿材料盒子內物品(全拿)
-            2.跑一遍所有座標 放置(包含放置的格子+2格)
-            3.如果跑完所有座標 身上物品還有 那就拿到指定位置放置(代表是多的)
-            4.如果沒跑完 身上物品就沒了 代表物品不夠 回去再拿一盒
-             */
-        } catch (error) {
-            cl(`建造地圖畫時發生錯誤: ${error}`)
         }
 
 
-        await new Promise(r => setTimeout(r, 50))
     }
+
 
     // 跑完所有座標 身上還有物品 代表是多的 拿到指定位置放置
     let bot_inv_items_count = 0
@@ -350,9 +360,9 @@ async function building(bot, mapart_map, previous_pos, userID) {
         cl(`地圖畫已完成!`)
         bot.chat(`/m ${userID} 地圖畫已完成!`)
     } else {
-        await cgm()
+        await cgm(bot)
         await bot.creative.flyTo(original_position)
-        await building(bot, mapart_map, previous_pos, userID)
+        await building(bot, mapart_map, previous_pos, userID, new_m)
     }
 
 }
@@ -384,6 +394,33 @@ function getDateTime() {
 
 async function throwItems(bot, item) {
     await bot.toss(item.type, item.metadata, item.count)
+}
+
+async function getMapof_InameANDPos() {
+
+    let time1 = performance.now()
+
+    let m = await getItemNameMap(blocks, palette)
+    let new_m = new Map()
+
+    for (let material of palette) {
+        new_m.set(material.Name.value.toString().split(":")[1], [])
+    }
+
+    for (let [i, j] of m) {
+        let itemname = j.toString().split(":")[1]
+        for (let [k, h] of new_m) {
+            if (k === itemname) {
+                h.push(i)
+            }
+        }
+    }
+
+    let time2 = performance.now()
+    cl(`計算座標及材料花費了 ${(time2 - time1) / 1000} 秒`)
+
+    return new_m
+
 }
 
 async function LoadNBTFile(FileName) {
