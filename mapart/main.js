@@ -295,8 +295,17 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
 
                                 if ((target_block_name === took_item.name) && (bot.blockAt(target_block.position).name === 'air')) {
 
-                                    await bot.creative.flyTo(new_position)
-                                    await bot.placeBlock(target_block, new vec3(0, 1, 0))
+                                    if (took_item.name.includes("log")) {
+
+                                        await bot.creative.flyTo(new_position)
+                                        await bot.placeBlock(target_block, new vec3(1, 1, 0))
+
+                                    } else {
+
+                                        await bot.creative.flyTo(new_position)
+                                        await bot.placeBlock(target_block, new vec3(0, 1, 0))
+
+                                    }
 
                                 }
                             }
@@ -393,7 +402,11 @@ function getDateTime() {
 }
 
 async function throwItems(bot, item) {
-    await bot.toss(item.type, item.metadata, item.count)
+    try {
+        await bot.toss(item.type, item.metadata, item.count)
+    } catch (error) {
+        cl(`丟棄身上物品時發生錯誤: ${error}`)
+    }
 }
 
 async function getMapof_InameANDPos() {
