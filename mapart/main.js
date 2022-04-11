@@ -68,7 +68,6 @@ async function connects() {
 
                             try {
 
-                                await LoadNBTFile('willsmith.nbt')
                                 original_position = bot.entity.position
                                 // await bot.creative.flyTo(bot.entity.position.plus(new vec3(0, 2, 0)))
                                 await bot.creative.startFlying()
