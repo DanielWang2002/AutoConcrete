@@ -268,45 +268,56 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
             for (let i of pos) {
                 try {
 
-                    // 目前地點
-                    // let new_position = now_position.plus((new vec3(i).minus(previous_pos))).floor()
-                    // previous_pos = new vec3(i)
-                    //
-                    // now_position = new_position
-
+                    // 欲飛往的地點
                     let new_position = original_position.plus(new vec3(i).floor()).minus(new vec3(0, 2, 0))
 
-                    // 將takeMaterial的材料拿到手上
+                    // 在背包查找是否有在材料盒拿取的item
                     let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[took_item.name].id, null, false)
 
                     if (PlaceItem != null) {
 
+                        // 將takeMaterial的材料拿到手上
                         await bot.equip(PlaceItem, 'hand')
 
                         if ((bot.blockAt(new_position.minus(new vec3(0, 4, 0))).name === 'air') && (await getMapValue(mapart_map, [i[0], i[1], i[2]]) === took_item.name)) {
 
                             for (let k = 0; k > -3; k--) {
-                                bot.inventory.findInventoryItem(mcData.itemsByName[took_item.name].id, null, false)
 
-                                let target_block = bot.blockAt(new_position.minus(new vec3(k, 4, 0)))
+                                let PlaceItem = bot.inventory.findInventoryItem(mcData.itemsByName[took_item.name].id, null, false)
 
-                                let target_block_name = await getMapValue(mapart_map, [i[0] + (-k), i[1], i[2]])
+                                if (PlaceItem != null) {
 
-                                if ((target_block_name === took_item.name) && (bot.blockAt(target_block.position).name === 'air')) {
+                                    let target_block = bot.blockAt(new_position.minus(new vec3(k, 4, 0)))
 
-                                    if (took_item.name.includes("log")) {
+                                    let target_block_name = await getMapValue(mapart_map, [i[0] + (-k), i[1], i[2]])
 
-                                        await bot.creative.flyTo(new_position)
-                                        await bot.placeBlock(target_block, new vec3(1, 1, 0))
+                                    if ((target_block_name === took_item.name) && (bot.blockAt(target_block.position).name === 'air')) {
 
-                                    } else {
+                                        if (took_item.name.includes("log")) {
 
-                                        await bot.creative.flyTo(new_position)
-                                        await bot.placeBlock(target_block, new vec3(0, 1, 0))
+                                            await bot.creative.flyTo(new_position)
+                                            await bot.placeBlock(target_block, new vec3(1, 1, 0))
+
+                                        } else {
+
+                                            await bot.creative.flyTo(new_position)
+                                            await bot.placeBlock(target_block, new vec3(0, 1, 0))
+
+                                        }
 
                                     }
 
+                                } else {
+
+                                    await bot.chat(`/warp ${settings.Material_Warp}`)
+                                    // 等待10秒 避免網路不好的情況導致延遲
+                                    await new Promise(r => setTimeout(r, 5000))
+                                    await takeMaterial(bot, userID)
+                                    await bot.chat(`/back`)
+                                    await new Promise(r => setTimeout(r, 5000))
+
                                 }
+
                             }
 
                         }
@@ -320,7 +331,6 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
                         await takeMaterial(bot, userID)
                         await bot.chat(`/back`)
                         await new Promise(r => setTimeout(r, 5000))
-
 
                     }
                     /*
