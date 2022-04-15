@@ -287,8 +287,9 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
                             await bot.creative.flyTo(new_position)
                             await bot.chat(`/cgm`)
                             await new Promise(r => setTimeout(r, 300))
-                            cgm_count += 2
                             if (cgm_count === 10) await new Promise(r => setTimeout(r, 3500))
+                            cgm_count += 2
+
 
                             for (let k = 0; k > -3; k--) {
 
