@@ -82,12 +82,14 @@ async function connects() {
                                     break
                                 }
 
-                                // 拿材料
+                                // 放置多於材料
                                 await bot.chat(`/warp ${settings.extraMaterial_Warp}`)
                                 await new Promise(r => setTimeout(r, settings.delay_onStart))
                                 await depositMaterial(bot, userID)
                                 await bot.chat(`/back`)
                                 await new Promise(r => setTimeout(r, settings.delay_onStart))
+
+                                // 拿材料
                                 await bot.chat(`/warp ${settings.Material_Warp}`)
                                 // 等待5秒 避免網路不好的情況導致錯誤
                                 await new Promise(r => setTimeout(r, settings.delay_onStart))
@@ -129,7 +131,10 @@ async function connects() {
                             break
 
                         case "test":
-                            await getWoodAxis(wood_axis_map, original_position)
+                            await bot.chat(`/warp ${settings.extraMaterial_Warp}`)
+                            await new Promise(r => setTimeout(r, settings.delay_onStart))
+                            await depositMaterial(bot, userID)
+                            await bot.chat(`/back`)
                             break
                     }
                 }
@@ -283,13 +288,12 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
                         if ((bot.blockAt(new_position.minus(new vec3(0, 4, 0))).name === 'air') && (await getMapValue(mapart_map, [i[0], i[1], i[2]]) === took_item.name)) {
 
                             await bot.chat(`/cgm`)
-                            await new Promise(r => setTimeout(r, 300))
+                            await new Promise(r => setTimeout(r, 500))
                             await bot.creative.flyTo(new_position)
                             await bot.chat(`/cgm`)
-                            await new Promise(r => setTimeout(r, 300))
+                            await new Promise(r => setTimeout(r, 500))
                             if (cgm_count === 10) await new Promise(r => setTimeout(r, 3500))
                             cgm_count += 2
-
 
                             for (let k = 0; k > -3; k--) {
 
@@ -384,7 +388,8 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
         bot.chat(`/m ${userID} 地圖畫已完成!`)
     } else {
         await cgm(bot)
-        await bot.creative.flyTo(original_position)
+        await bot.chat(`/warp ${bot.username}`)
+        await new Promise(r => setTimeout(r, settings.delay_onStart))
         await building(bot, mapart_map, previous_pos, userID, new_m)
     }
 
