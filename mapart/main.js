@@ -40,12 +40,13 @@ async function connects() {
 
         bot.loadPlugin(pathfinder)
 
-        bot.once('spawn', () => {
+        bot.once('spawn', async () => {
 
             mcData = require('minecraft-data')(bot.version)
 
-        })
+            await LoadNBTFile('mapart')
 
+        })
 
         bot.on("message", async function (jsonMsg) {
             console.log(getDateTime() + jsonMsg.toAnsi()) //顯示訊息在黑窗
@@ -122,7 +123,7 @@ async function connects() {
                         case "load":
 
                             await LoadNBTFile(NBTFileName)
-                            bot.chat(`/m ${userID} 已載入NBT檔: ${NBTFileName}`)
+                            bot.chat(`/m ${userID} 已載入NBT檔: ${NBTFileName}.nbt`)
 
                             break
 
@@ -459,7 +460,7 @@ async function LoadNBTFile(FileName) {
 
     try {
 
-        const f = await fs.readFileSync(`${process.cwd()}/nbt/${FileName}`)
+        const f = await fs.readFileSync(`${process.cwd()}/nbt/${FileName}.nbt`)
         const {parsed, type} = await nbt.parse(f, 'big')
         blocks = parsed.value.blocks.value.value
         palette = parsed.value.palette.value.value
