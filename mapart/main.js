@@ -49,7 +49,7 @@ async function connects() {
         })
 
         bot.on("message", async function (jsonMsg) {
-            console.log(getDateTime() + jsonMsg.toAnsi()) //顯示訊息在黑窗
+            cl(jsonMsg.toAnsi()) //顯示訊息在黑窗
             if (jsonMsg.toString().includes(`-> 您]`)) {
                 let tmp = jsonMsg.toString().split(" ")
                 // [ '[DanielWang_', '->', '您]', 'test' ]
@@ -71,6 +71,9 @@ async function connects() {
 
                             try {
 
+                                // 將起點設置為Warp
+                                await createWarp(bot, userID)
+
                                 original_position = bot.entity.position
                                 await bot.creative.startFlying()
 
@@ -85,18 +88,18 @@ async function connects() {
 
                                 // 放置多於材料
                                 await bot.chat(`/warp ${settings.extraMaterial_Warp}`)
-                                await new Promise(r => setTimeout(r, settings.delay_onStart))
+                                await sleep(settings.delay_onStart)
                                 await depositMaterial(bot, userID)
                                 await bot.chat(`/back`)
-                                await new Promise(r => setTimeout(r, settings.delay_onStart))
+                                await sleep(settings.delay_onStart)
 
                                 // 拿材料
                                 await bot.chat(`/warp ${settings.Material_Warp}`)
                                 // 等待5秒 避免網路不好的情況導致錯誤
-                                await new Promise(r => setTimeout(r, settings.delay_onStart))
+                                await sleep(settings.delay_onStart)
                                 await takeMaterial(bot, userID)
                                 await bot.chat(`/back`)
-                                await new Promise(r => setTimeout(r, settings.delay_onStart))
+                                await sleep(settings.delay_onStart)
 
 
                                 let new_m = await getMapof_InameANDPos()
@@ -131,11 +134,12 @@ async function connects() {
                             await bot.chat(`/cgm`)
                             break
 
+                        case "setwarp":
+                            await createWarp(bot, userID)
+                            break
+
                         case "test":
-                            await bot.chat(`/warp ${settings.extraMaterial_Warp}`)
-                            await new Promise(r => setTimeout(r, settings.delay_onStart))
-                            await depositMaterial(bot, userID)
-                            await bot.chat(`/back`)
+
                             break
                     }
                 }
@@ -181,11 +185,15 @@ async function getMapValue(map, ar) {
     }
 }
 
+async function sleep(ms) {
+    await new Promise(r => setTimeout(r, ms))
+}
+
 async function cgm(bot) {
     bot.chat(`/cgm`)
-    await new Promise(r => setTimeout(r, 500))
+    await sleep(500)
     bot.chat(`/cgm`)
-    await new Promise(r => setTimeout(r, 500))
+    await sleep(500)
 }
 
 async function takeMaterial(bot, userID) {
@@ -259,6 +267,37 @@ async function depositMaterial(bot, userID) {
     }
 }
 
+async function createWarp(bot, userID) {
+    return new Promise(async resolve => {
+        try {
+            await bot.chat(`/mywarps`)
+            bot.once("windowOpen", function openMywarps(window) {
+                try {
+
+                    if (window.title === "{\"color\":\"dark_gray\",\"text\":\"公開傳送點管理區\"}") {
+                        bot.clickWindow(18, 0, 0).then(() => {
+                            bot.closeWindow(window)
+                            bot.removeListener("windowOpen", openMywarps)
+                            const x = bot.entity.position.x.toFixed(1)
+                            const y = bot.entity.position.y.toFixed(1)
+                            const z = bot.entity.position.z.toFixed(1)
+                            bot.chat(`/m ${userID} 已將warp設置在 (${x}, ${y}, ${z})`)
+                            resolve()
+                        })
+                    }
+
+                } catch (error) {
+
+                    cl(`創建warp時發生錯誤: ${error}`)
+
+                }
+            })
+        } catch (error) {
+            cl(`創建warp時發生錯誤: ${error}`)
+        }
+    })
+}
+
 async function building(bot, mapart_map, previous_pos, userID, new_m) {
 
     await cgm(bot)
@@ -289,11 +328,11 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
                         if ((bot.blockAt(new_position.minus(new vec3(0, 4, 0))).name === 'air') && (await getMapValue(mapart_map, [i[0], i[1], i[2]]) === took_item.name)) {
 
                             await bot.chat(`/cgm`)
-                            await new Promise(r => setTimeout(r, 500))
+                            await sleep(500)
                             await bot.creative.flyTo(new_position)
                             await bot.chat(`/cgm`)
-                            await new Promise(r => setTimeout(r, 500))
-                            if (cgm_count === 10) await new Promise(r => setTimeout(r, 3500))
+                            await sleep(500)
+                            if (cgm_count === 10) await sleep(3500)
                             cgm_count += 2
 
                             for (let k = 0; k > -3; k--) {
@@ -318,10 +357,10 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
 
                                     await bot.chat(`/warp ${settings.Material_Warp}`)
                                     // 等待10秒 避免網路不好的情況導致延遲
-                                    await new Promise(r => setTimeout(r, 5000))
+                                    await sleep(5000)
                                     await takeMaterial(bot, userID)
                                     await bot.chat(`/back`)
-                                    await new Promise(r => setTimeout(r, 5000))
+                                    await sleep(5000)
 
                                 }
 
@@ -338,10 +377,10 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
 
                         await bot.chat(`/warp ${settings.Material_Warp}`)
                         // 等待10秒 避免網路不好的情況導致延遲
-                        await new Promise(r => setTimeout(r, 5000))
+                        await sleep(5000)
                         await takeMaterial(bot, userID)
                         await bot.chat(`/back`)
-                        await new Promise(r => setTimeout(r, 5000))
+                        await sleep(5000)
 
                     }
 
@@ -349,7 +388,7 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
                     cl(`建造地圖畫時發生錯誤: ${error}`)
                 }
 
-                await new Promise(r => setTimeout(r, 50))
+                await sleep(50)
 
                 if (cgm_count === 10) cgm_count = 0
 
@@ -371,11 +410,11 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
         try {
             await bot.chat(`/warp ${settings.extraMaterial_Warp}`)
             // 等待5秒 避免網路不好的情況導致延遲
-            await new Promise(r => setTimeout(r, 5000))
+            await sleep(5000)
             await cgm(bot)
             await depositMaterial(bot, userID)
             await bot.chat(`/warp ${settings.Material_Warp}`)
-            await new Promise(r => setTimeout(r, 5000))
+            await sleep(5000)
             await takeMaterial(bot, userID)
 
         } catch (error) {
@@ -390,7 +429,7 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
     } else {
         await cgm(bot)
         await bot.chat(`/warp ${bot.username}`)
-        await new Promise(r => setTimeout(r, settings.delay_onStart))
+        await sleep(settings.delay_onStart)
         await building(bot, mapart_map, previous_pos, userID, new_m)
     }
 
