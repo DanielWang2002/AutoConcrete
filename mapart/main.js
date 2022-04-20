@@ -347,7 +347,7 @@ async function building(bot, mapart_map, previous_pos, userID, new_m) {
                             extra_pos.push(i)
 
                             // 原始座標: x+1, y+2, z-2 = 最左上角
-                            for (let x = 1; x < 3; x++) {
+                            for (let x = 0; x < 3; x++) {
 
                                 for (let y = -2; y < 3; y++) {
 
