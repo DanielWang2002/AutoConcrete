@@ -3,5 +3,5 @@
     "extraMaterialBox" : ["-1097", "93", "6439"],
     "Material_Warp" : "DanielWang_",
     "extraMaterial_Warp" : "ED_Xian_10",
-    "delay_onStart" : 8000
+    "delay_onStart" : 3000
 }

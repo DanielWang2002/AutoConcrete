@@ -160,6 +160,12 @@ async function connects() {
             }
         })
 
+        // 檢測安德聲音 -> cgm
+        // bot.on('soundEffectHeard', async function (soundName) {
+        //     console.log('test')
+        //     cl(soundName)
+        // })
+
         bot.on('kicked', console.log)
         bot.on('error', console.log)
         bot.on('end', () => {
@@ -306,9 +312,61 @@ async function createWarp(bot, userID) {
     })
 }
 
+async function getVec3ToMathRound(vec) {
+    return new vec3(Math.round(vec.x), Math.round(vec.y), Math.round(vec.z))
+}
+
+async function botPosIsNOTChanged(pos1, pos2) {
+
+    let check = []
+
+    for (let x = -1; x < 2; x++) {
+        for (let z = -1; z < 2; z++) {
+            check.push((pos1.x + x === pos2.x) && (pos1.z + z === pos2.z))
+        }
+    }
+
+    return check.includes(true)
+    // return ((Math.abs(pos1.x) - Math.abs(pos2.x)) < 2) || ((Math.abs(pos1.y) - Math.abs(pos2.y)) < 2) || ((Math.abs(pos1.z) - Math.abs(pos2.z)) < 2)
+}
+
+async function canFly(bot) {
+
+    const bot_pos = await getVec3ToMathRound(bot.entity.position)
+    // bot頭上
+    const block_OverHead = bot.blockAt(bot_pos.plus(new vec3(0, 3, 0))).name
+    // bot腳前下方
+    const block_aheadBot1 = bot.blockAt(bot_pos.plus(new vec3(0, 1, 1))).name
+    // bot腳前上方
+    const block_aheadBot2 = bot.blockAt(bot_pos.plus(new vec3(0, 2, 1))).name
+
+    cl(`overHead: ${block_OverHead}`)
+    cl(`aheadBot1: ${block_aheadBot1}`)
+    cl(`aheadBot2: ${block_aheadBot2}`)
+
+    // 不被任何方塊阻擋飛行
+    if ((block_OverHead === 'air') && (block_aheadBot1 === 'air') && (block_aheadBot2 === 'air')) return true
+
+}
+
 async function building(bot, mapart_map, userID, new_m) {
 
     await cgm(bot)
+
+    // let now_position = await getVec3ToMathRound(bot.entity.position)
+    let now_position = bot.entity.position.floor()
+
+    // let cgmToggle = setInterval(async () => {
+    //
+    //     if (await botPosIsNOTChanged(bot.entity.position.floor(), now_position)) {
+    //         // cl(`飛高2格`)
+    //         // await bot.creative.flyTo(bot.entity.position.plus(new vec3(0, 2, 0)))
+    //         await cgm(bot)
+    //     } else {
+    //         now_position = bot.entity.position.floor()
+    //     }
+    //
+    // }, 3000)
 
     for (let [name, pos] of new_m) {
 
@@ -334,14 +392,14 @@ async function building(bot, mapart_map, userID, new_m) {
 
                         // 該座標方塊為空氣，且欲放置方塊與took_item為同物品
                         const MapValue1 = await getMapValue(mapart_map, i)
-                        if ((bot.blockAt(new_position.minus(new vec3(0, 4, 0))).name === 'air') && (MapValue1 === took_item.name)) {
+                        if ((bot.blockAt(new_position.plus(new vec3(0, 2, 0))).name === 'air') && (MapValue1 === took_item.name)) {
 
                             await bot.chat(`/cgm`)
                             await sleep(500)
-                            await bot.creative.flyTo(new_position.minus(new vec3(0,2,0)))
+                            await bot.creative.flyTo(new_position.plus(new vec3(0, 4, 0)))
                             await bot.chat(`/cgm`)
                             await sleep(500)
-                            if (cgm_count === 10) await sleep(4000)
+                            if (cgm_count === 10) await sleep(8000)
                             cgm_count += 2
 
                             let extra_pos = []
@@ -349,14 +407,14 @@ async function building(bot, mapart_map, userID, new_m) {
 
                             // 原始座標: x+1, y+2, z-2 = 最左上角
                             // x =  0 ~ 2
-                            // y = -2 ~ 3
+                            // y =  0 ~ 3
                             // z = -2 ~ 3
                             // 3x5x5
                             for (let x = 0; x < 3; x++) {
 
-                                for (let y = -2; y < 4; y++) {
+                                for (let y = 0; y < 4; y++) {
 
-                                    for (let z = -2; z < 3; z++) {
+                                    for (let z = -2; z < 4; z++) {
 
                                         // 方塊座標
                                         const block_pos = new vec3(i)
@@ -379,7 +437,7 @@ async function building(bot, mapart_map, userID, new_m) {
 
                                     // 正常應該用plus(original_position)
                                     // 此處用-1216, 94, 6463為應對ED放錯座標
-                                    let target_block = bot.blockAt(new vec3(pos).plus(new vec3(-1216, 94, 6463)))
+                                    let target_block = bot.blockAt(new vec3(pos).plus(original_position))
                                     let target_block_material = await getMapValue(mapart_map, pos)
 
                                     if ((target_block_material === took_item.name) && (target_block.name === 'air')) {
@@ -444,6 +502,8 @@ async function building(bot, mapart_map, userID, new_m) {
 
         await takeMaterial(bot, userID)
         await bot.chat(`/warp ${bot.username}`)
+
+        // clearInterval(cgmToggle)
 
         await building(bot, mapart_map, userID, new_m)
 
