@@ -262,7 +262,7 @@ async function depositMaterial(bot, userID) {
         }
 
         await chest.deposit(item_type, null, item_count)
-        await bot.chat(`/m ${userID} 已將多餘的 ${item_name} x${item_count} 放置到容器裡`)
+        await bot.chat(`/m ${userID} 已將 ${item_name} x${item_count} 放置到容器裡`)
         await chest.close()
     } catch (error) {
         cl(`放置多於材料時發生錯誤: ${error}`)
@@ -368,6 +368,8 @@ async function building(bot, mapart_map, userID, new_m) {
     //
     // }, 3000)
 
+    let noMaterialOnHand = false
+
     for (let [name, pos] of new_m) {
 
         // 材料盒拿的物品與當前座標ARRAY的物品相同
@@ -395,11 +397,11 @@ async function building(bot, mapart_map, userID, new_m) {
                         if ((bot.blockAt(new_position.plus(new vec3(0, 2, 0))).name === 'air') && (MapValue1 === took_item.name)) {
 
                             await bot.chat(`/cgm`)
-                            await sleep(500)
+                            await sleep(parseInt(settings.cgm_delay1))
                             await bot.creative.flyTo(new_position.plus(new vec3(0, 4, 0)))
                             await bot.chat(`/cgm`)
-                            await sleep(500)
-                            if (cgm_count === 10) await sleep(8000)
+                            await sleep(parseInt(settings.cgm_delay1))
+                            if (cgm_count === 10) await sleep(parseInt(settings.cgm_delay2))
                             cgm_count += 2
 
                             let extra_pos = []
@@ -445,6 +447,7 @@ async function building(bot, mapart_map, userID, new_m) {
                                     }
 
                                 } else {
+                                    noMaterialOnHand = true
                                     break
                                 }
 
@@ -465,6 +468,8 @@ async function building(bot, mapart_map, userID, new_m) {
                 await sleep(50)
 
                 if (cgm_count === 10) cgm_count = 0
+
+                if (noMaterialOnHand) break
 
             }
 
@@ -488,8 +493,8 @@ async function building(bot, mapart_map, userID, new_m) {
             await bot.chat(`/warp ${settings.extraMaterial_Warp}`)
             // 等待5秒 避免網路不好的情況導致延遲
             await sleep(8000)
-            await cgm(bot)
             await depositMaterial(bot, userID)
+            await sleep(1000)
 
         } catch (error) {
             cl(`放置多於材料時發生錯誤: ${error}`)
@@ -501,6 +506,7 @@ async function building(bot, mapart_map, userID, new_m) {
     if (await getMaterialBoxIsExist(bot)) {
 
         await takeMaterial(bot, userID)
+        await sleep(1000)
         await bot.chat(`/warp ${bot.username}`)
 
         // clearInterval(cgmToggle)
