@@ -312,61 +312,11 @@ async function createWarp(bot, userID) {
     })
 }
 
-async function getVec3ToMathRound(vec) {
-    return new vec3(Math.round(vec.x), Math.round(vec.y), Math.round(vec.z))
-}
-
-async function botPosIsNOTChanged(pos1, pos2) {
-
-    let check = []
-
-    for (let x = -1; x < 2; x++) {
-        for (let z = -1; z < 2; z++) {
-            check.push((pos1.x + x === pos2.x) && (pos1.z + z === pos2.z))
-        }
-    }
-
-    return check.includes(true)
-    // return ((Math.abs(pos1.x) - Math.abs(pos2.x)) < 2) || ((Math.abs(pos1.y) - Math.abs(pos2.y)) < 2) || ((Math.abs(pos1.z) - Math.abs(pos2.z)) < 2)
-}
-
-async function canFly(bot) {
-
-    const bot_pos = await getVec3ToMathRound(bot.entity.position)
-    // bot頭上
-    const block_OverHead = bot.blockAt(bot_pos.plus(new vec3(0, 3, 0))).name
-    // bot腳前下方
-    const block_aheadBot1 = bot.blockAt(bot_pos.plus(new vec3(0, 1, 1))).name
-    // bot腳前上方
-    const block_aheadBot2 = bot.blockAt(bot_pos.plus(new vec3(0, 2, 1))).name
-
-    cl(`overHead: ${block_OverHead}`)
-    cl(`aheadBot1: ${block_aheadBot1}`)
-    cl(`aheadBot2: ${block_aheadBot2}`)
-
-    // 不被任何方塊阻擋飛行
-    if ((block_OverHead === 'air') && (block_aheadBot1 === 'air') && (block_aheadBot2 === 'air')) return true
-
-}
-
 async function building(bot, mapart_map, userID, new_m) {
 
+    cl(`took_item: ${took_item.name}`)
+
     await cgm(bot)
-
-    // let now_position = await getVec3ToMathRound(bot.entity.position)
-    let now_position = bot.entity.position.floor()
-
-    // let cgmToggle = setInterval(async () => {
-    //
-    //     if (await botPosIsNOTChanged(bot.entity.position.floor(), now_position)) {
-    //         // cl(`飛高2格`)
-    //         // await bot.creative.flyTo(bot.entity.position.plus(new vec3(0, 2, 0)))
-    //         await cgm(bot)
-    //     } else {
-    //         now_position = bot.entity.position.floor()
-    //     }
-    //
-    // }, 3000)
 
     let noMaterialOnHand = false
 
@@ -396,13 +346,13 @@ async function building(bot, mapart_map, userID, new_m) {
                         const MapValue1 = await getMapValue(mapart_map, i)
                         if ((bot.blockAt(new_position.plus(new vec3(0, 2, 0))).name === 'air') && (MapValue1 === took_item.name)) {
 
-                            await bot.chat(`/cgm`)
-                            await sleep(parseInt(settings.cgm_delay1))
+                            // await bot.chat(`/cgm`)
+                            // await sleep(parseInt(settings.cgm_delay1))
                             await bot.creative.flyTo(new_position.plus(new vec3(0, 4, 0)))
-                            await bot.chat(`/cgm`)
-                            await sleep(parseInt(settings.cgm_delay1))
-                            if (cgm_count === 10) await sleep(parseInt(settings.cgm_delay2))
-                            cgm_count += 2
+                            // await bot.chat(`/cgm`)
+                            // await sleep(parseInt(settings.cgm_delay1))
+                            // if (cgm_count === 10) await sleep(parseInt(settings.cgm_delay2))
+                            // cgm_count += 2
 
                             let extra_pos = []
                             extra_pos.push(i)
@@ -439,7 +389,8 @@ async function building(bot, mapart_map, userID, new_m) {
 
                                     // 正常應該用plus(original_position)
                                     // 此處用-1216, 94, 6463為應對ED放錯座標
-                                    let target_block = bot.blockAt(new vec3(pos).plus(original_position))
+                                    // .minus(new vec3(0, 4, 0) 為2D限定，比起點低一格
+                                    let target_block = bot.blockAt(new vec3(pos).plus(original_position)).minus(new vec3(0, 4, 0))
                                     let target_block_material = await getMapValue(mapart_map, pos)
 
                                     if ((target_block_material === took_item.name) && (target_block.name === 'air')) {
@@ -503,11 +454,17 @@ async function building(bot, mapart_map, userID, new_m) {
     }
 
     // isExist => take material then continue to building
-    if (await getMaterialBoxIsExist(bot)) {
+
+    const isEnd = await getMaterialBoxIsExist(bot)
+
+    await sleep(1000)
+
+    if (isEnd) {
 
         await takeMaterial(bot, userID)
-        await sleep(1000)
+        await sleep(2000)
         await bot.chat(`/warp ${bot.username}`)
+        await sleep(5000)
 
         // clearInterval(cgmToggle)
 
