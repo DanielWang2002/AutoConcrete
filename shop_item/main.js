@@ -5,17 +5,24 @@ let request = require('request-promise');
 const tokens = require('prismarine-tokens-fixed');  //讀取prismarine-tokens-fixed(驗證緩存)模塊
 const vec3 = require('vec3')
 
+/*
+TODO: - [系統] 你身上沒有足夠的空間換取此物品。 請空出足夠的空間。
+ */
+
 const whitelist = config.whitelist
 let isCommandStop = false
 let stopClickWindow = false
 let find_Source_Save_sb = false
 let not_found_sb_count = 0
-let gameID
+
+// 遊戲ID
+let GameID
 
 let opt = {
     host: config.ip,
     auth: config.auth,
     username: config.username,
+    password: config.password,
     // tokensLocation: './bot_tokens.json',
     // tokensDebug: true,
     version: "1.18.1"
@@ -31,10 +38,23 @@ function connects() {
 
         bot.once('spawn', () => {
             let mcData = require('minecraft-data')(bot.version)
+            GameID = bot.username
+            // 遊戲內ID與config(DB)不同
+            if (GameID !== config.username) {
+                cl(`您的遊戲ID與資料庫不符合，請檢查config.json中的username`)
+                cl(`有任何疑問請私訊Discord: Daniel Wang#0306`)
+                cl(`程式即將關閉...`)
+                setTimeout(function () {
+                    process.exit()
+                }, 3000)
+            }
         })
 
+
+
         bot.on("message", async function (jsonMsg) {
-            console.log(jsonMsg.toAnsi()) //顯示訊息在黑窗
+            const health = /目標生命 \: ❤❤❤❤❤❤❤❤❤❤ \/ ([\S]+)/g.exec(jsonMsg.toString())
+            if (!health) cl(jsonMsg.toAnsi()) //顯示訊息在黑窗
             if (jsonMsg.toString().includes(`-> 您]`)) {
                 let tmp = jsonMsg.toString().split(" ")
                 // [ '[DanielWang_', '->', '您]', 'test' ]
@@ -94,15 +114,17 @@ function connects() {
                                         await new Promise(r => setTimeout(r, settings.waitfor_next_delay))
 
                                     } else {
-                                        not_found_sb_count += 1
+                                        await new Promise(r => setTimeout(r, settings.waitfor_next_delay))
+
                                         if (not_found_sb_count == settings.max_check_sb_times) {
                                             bot.chat(`/m ${userID} 超過${settings.max_check_sb_times}次找不到界符盒`)
                                             await new Promise(r => setTimeout(r, 300))
                                             bot.chat(`/m ${userID} 已終止兌換`)
                                             break
                                         }
+                                        not_found_sb_count += 1
+
                                         bot.chat(`/m ${userID} 找不到材料盒或儲存盒，請檢查！`)
-                                        await new Promise(r => setTimeout(r, settings.waitfor_next_delay))
                                     }
 
                                 } else {
@@ -345,7 +367,7 @@ async function withdrawItem(bot, playerid, shulker_box_block, id) {
             }
             shulker_box.close()
         } catch (err) {
-            console.log(`無法取出:${err}`)
+            cl(`無法取出:${err}`)
         }
     }
 
@@ -436,7 +458,6 @@ async function depositItem(bot, playerid, shulker_box_block, id) {
                 if (clay_ball_count > (1728 - (parseInt(shulker_box.containerItems().length) * 64))) {
                     await shulker_box.deposit(clay_ball_type, null, (1728 - (parseInt(shulker_box.containerItems().length) * 64)))
                     await new Promise(r => setTimeout(r, 1500)) // 等待1.5秒，確保新的盒子會吐出來
-                    console.log("等1.5秒了!")
                     await shulker_box.deposit(clay_ball_type, null, clay_ball_count - (1728 - (parseInt(shulker_box.containerItems().length) * 64)))
                 } else {
                     await shulker_box.deposit(clay_ball_type, null, clay_ball_count)
@@ -472,7 +493,7 @@ async function depositItem(bot, playerid, shulker_box_block, id) {
                 break
         }
     } catch (err) {
-        console.log(`無法存入:${err}`)
+        cl(`無法存入:${err}`)
     }
     shulker_box.close()
 
@@ -492,7 +513,7 @@ async function open_shop_item_to_exchange(bot, id) {
                 }
             })
         } catch (err) {
-            console.log(`兌換物品時發生錯誤${err}`)
+            cl(`兌換物品時發生錯誤${err}`)
         }
     })
 }
@@ -501,27 +522,31 @@ let key_is_valid = false
 
 function getDateTime() {
 
-    var date = new Date();
+    let date = new Date();
 
-    var hour = date.getHours();
+    let hour = date.getHours();
     hour = (hour < 10 ? "0" : "") + hour;
 
-    var min = date.getMinutes();
+    let min = date.getMinutes();
     min = (min < 10 ? "0" : "") + min;
 
-    var sec = date.getSeconds();
+    let sec = date.getSeconds();
     sec = (sec < 10 ? "0" : "") + sec;
 
-    var year = date.getFullYear();
+    let year = date.getFullYear();
 
-    var month = date.getMonth() + 1;
+    let month = date.getMonth() + 1;
     month = (month < 10 ? "0" : "") + month;
 
-    var day = date.getDate();
+    let day = date.getDate();
     day = (day < 10 ? "0" : "") + day;
 
-    return "@" + year + "/" + month + "/" + day + "-" + hour + ":" + min + ":" + sec;
+    return "@" + year + "/" + month + "/" + day + " " + hour + ":" + min + ":" + sec;
 
+}
+
+function cl(msg) {
+    console.log(getDateTime() + " " + msg )
 }
 
 function Auth() {
@@ -549,8 +574,8 @@ function Auth() {
             if (email == res.email) {
                 // key & email都一樣 可以登入
                 key_is_valid = true
-                console.log("金鑰正確")
-                console.log(`即將登入...`)
+                cl("金鑰正確")
+                cl(`即將登入...`)
 
                 // 帳號與登錄在資料庫的帳號不一樣，將資料庫的更新為現登入帳號
             } else {
@@ -564,9 +589,9 @@ function Auth() {
                     if (error) throw new Error(error);
                 });
                 key_is_valid = true
-                console.log("金鑰正確")
-                console.log(`先前未登入過有其他帳號登入過，已更新為帳號: ${email}`)
-                console.log(`即將登入...`)
+                cl("金鑰正確")
+                cl(`先前未登入過有其他帳號登入過，已更新為帳號: ${email}`)
+                cl(`即將登入...`)
             }
         }
     });
@@ -590,7 +615,7 @@ function checkKey_cycle() {
             if (error) throw new Error(error);
             // 金鑰無效
             if (response.body == "Invalid Key") {
-                console.log("偵測到序號錯誤！")
+                cl("偵測到序號錯誤！")
                 return false
             }
             let res = JSON.parse(response.body)
@@ -602,8 +627,8 @@ function checkKey_cycle() {
                 if (email != res.email) {
                     if (!isClose) {
                         console.log(getDateTime())
-                        console.log(`偵測到該序號在他處被使用！ 3秒後將關閉程式`)
-                        console.log(`有任何問題請至DC詢問！`)
+                        cl(`偵測到該序號在他處被使用！ 3秒後將關閉程式`)
+                        cl(`有任何問題請至DC詢問！`)
                     }
                     isClose = true
                     setTimeout(function () {
@@ -622,6 +647,6 @@ setTimeout(() => {
         connects()
         checkKey_cycle()
     } else {
-        console.log("金鑰不正確，請檢查您的序號")
+        cl("金鑰不正確，請檢查您的序號")
     }
 }, 1000);
