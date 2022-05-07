@@ -14,7 +14,7 @@
         "y": "81",
         "z": "-2647"
     },
-    "shopitem_click_delay": 1000,
+    "shopitem_click_delay": 2000,
     "waitfor_next_delay": 1000,
     "max_check_sb_times": 10
 }

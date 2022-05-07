@@ -88,6 +88,7 @@ function connects() {
 
                             while (!isCommandStop) {
 
+                                // 兌換海燈籠
                                 if (id == "35") {
 
                                     if (check_source_save_sb_for_seaLantern(bot)) {
@@ -101,8 +102,8 @@ function connects() {
                                         if (getShulkerBox2(bot).name == "shulker_box") await withdrawItem(bot, userID, getShulkerBox2(bot), id)
                                         // /shop_item 兌換，直到出現[系統] 你必須有 _____ 才能兌換
                                         while (!stopClickWindow) {
-                                            let p = open_shop_item_to_exchange(bot, id)
-                                            wait_store = [p]
+                                            let p = await open_shop_item_to_exchange(bot, id)
+                                            let wait_store = [p]
                                             await Promise.all(wait_store)
                                             await new Promise(r => setTimeout(r, settings.shopitem_click_delay));
                                         }
@@ -138,8 +139,8 @@ function connects() {
                                         await withdrawItem(bot, userID, getShulkerBox1(bot), id)
                                         // /shop_item 兌換，直到出現[系統] 你必須有 _____ 才能兌換
                                         while (!stopClickWindow) {
-                                            let p = open_shop_item_to_exchange(bot, id)
-                                            wait_store = [p]
+                                            let p = await open_shop_item_to_exchange(bot, id)
+                                            let wait_store = [p]
                                             await Promise.all(wait_store)
                                             await new Promise(r => setTimeout(r, settings.shopitem_click_delay));
                                         }
@@ -151,12 +152,14 @@ function connects() {
                                         await new Promise(r => setTimeout(r, settings.waitfor_next_delay))
 
                                     } else {
-                                        not_found_sb_count += 1
+
                                         if (not_found_sb_count === settings.max_check_sb_times) {
                                             bot.chat(`/m ${userID} 超過${settings.max_check_sb_times}次找不到界符盒`)
                                             bot.chat(`/m ${userID} 已終止兌換`)
                                             break
                                         }
+                                        not_found_sb_count += 1
+
                                         bot.chat(`/m ${userID} 找不到材料盒或儲存盒，請檢查！`)
                                         await new Promise(r => setTimeout(r, settings.waitfor_next_delay))
                                     }
@@ -187,13 +190,14 @@ function connects() {
                 }
 
             } else if (jsonMsg.toString().startsWith(`[系統] `) &&
-                jsonMsg.toString().toLowerCase().includes(`想要你傳送到 該玩家 的位置!`) ||
+                jsonMsg.toString().toLowerCase().includes(`想要你傳送到 該玩家 的位置`) ||
                 jsonMsg.toString().toLowerCase().includes(`想要傳送到 你 的位置`)) {
                 let msg = jsonMsg.toString().split(/ +/g);
                 let playerid = msg[1]
 
                 if (whitelist.includes(playerid)) {
-                    bot.chat(`/tok`)
+                    // bot.chat(`/tok`)
+                    bot.chat(`/tpaccept ${playerid}`)
                 } else {
                     bot.chat(`/tno`)
                 }
@@ -253,33 +257,32 @@ function getShulkerBox3(bot) {
     return sb;
 }
 
-//丟棄超過9組的物品
+//丟棄物品
 async function throwItems(bot, item) {
-    await bot.toss(item.type, item.metadata, item.count)
-    // return new Promise(resolve => {
-    //     try {
-    //         await bot.toss(item.type, item.metadata, item.count)
-    //         resolve()
-    //     } catch (error) {
-    //         console.log(`丟棄物品時發生錯誤: ${error}`)
-    //     }
-    // })
+    try {
+        await bot.toss(item.type, item.metadata, item.count)
+    } catch (error) {
+        cl(`丟棄身上物品時發生錯誤: ${error}`)
+    }
 }
 
 async function withdrawItem(bot, playerid, shulker_box_block, id) {
+    /*
+    拿取材料
+     */
+
 
     // 將界伏盒方塊轉成界符盒
     let shulker_box = await bot.openChest(shulker_box_block);
     // 欲兌換的物品
     let exchange_item
-    // 盒內物品數量 最大1728
-    let sb_containerItems_count = 0
+    let exchange_item_count = 0
 
     if (shulker_box.containerItems().length !== 0) {
 
         for (let item of shulker_box.containerItems()) {
             exchange_item = item
-            sb_containerItems_count += item.count
+            exchange_item_count += item.count
         }
 
     } else {
@@ -297,37 +300,11 @@ async function withdrawItem(bot, playerid, shulker_box_block, id) {
                     if (exchange_item.name == "prismarine_shard") {
 
                         await shulker_box.withdraw(exchange_item.type, null, 256)
-                        // if (sb_containerItems_count >= 256) {
-
-                        //     await shulker_box.withdraw(exchange_item.type, null, 256)
-                        //     console.log("這次材料>256")
-
-                        // } else {
-
-                        //     await shulker_box.withdraw(exchange_item.type, null, sb_containerItems_count)
-                        //     await new Promise(r => setTimeout(r, 1000)) // 等待1秒，確保新的盒子會吐出來
-                        //     await withdrawItem(bot, playerid, shulker_box_block, id)
-                        //     console.log("這次材料<256")
-
-                        // }
 
                         // 海磷晶體
                     } else if (exchange_item.name == "prismarine_crystals") {
 
                         await shulker_box.withdraw(exchange_item.type, null, 320)
-                        // if (sb_containerItems_count >= 320) {
-
-                        //     await shulker_box.withdraw(exchange_item.type, null, 320)
-                        //     console.log("這次材料>320")
-
-                        // } else {
-
-                        //     await shulker_box.withdraw(exchange_item.type, null, sb_containerItems_count)
-                        //     await new Promise(r => setTimeout(r, 1000)) // 等待1秒，確保新的盒子會吐出來
-                        //     await withdrawItem(bot, playerid, shulker_box_block, id)
-                        //     console.log("這次材料>320")
-
-                        // }
 
                     }
                     break
@@ -356,7 +333,7 @@ async function withdrawItem(bot, playerid, shulker_box_block, id) {
                     break
 
                 case "51":
-                    await shulker_box.withdraw(exchange_item.type, null, 1152)
+                    await shulker_box.withdraw(exchange_item.type, null, exchange_item_count > 1152 ? 1152 : exchange_item_count)
                     break
                 case "52":
                     await shulker_box.withdraw(exchange_item.type, null, 576)
@@ -365,7 +342,7 @@ async function withdrawItem(bot, playerid, shulker_box_block, id) {
                     await shulker_box.withdraw(exchange_item.type, null, 1728)
                     break
             }
-            shulker_box.close()
+            await shulker_box.close()
         } catch (err) {
             cl(`無法取出:${err}`)
         }
@@ -457,10 +434,12 @@ async function depositItem(bot, playerid, shulker_box_block, id) {
 
                 if (clay_ball_count > (1728 - (parseInt(shulker_box.containerItems().length) * 64))) {
                     await shulker_box.deposit(clay_ball_type, null, (1728 - (parseInt(shulker_box.containerItems().length) * 64)))
+                    await shulker_box.close()
                     await new Promise(r => setTimeout(r, 1500)) // 等待1.5秒，確保新的盒子會吐出來
-                    await shulker_box.deposit(clay_ball_type, null, clay_ball_count - (1728 - (parseInt(shulker_box.containerItems().length) * 64)))
+                    await depositItem(bot, playerid, shulker_box_block, id)
                 } else {
                     await shulker_box.deposit(clay_ball_type, null, clay_ball_count)
+                    await shulker_box.close()
                 }
 
                 break
