@@ -1,9 +1,0 @@
-{
-    "MaterialBox" : ["-1087","97","6456"],
-    "extraMaterialBox" : ["-1097", "93", "6439"],
-    "Material_Warp" : "DanielWang_",
-    "extraMaterial_Warp" : "ED_Xian_10",
-    "cgm_delay1" : 500,
-    "cgm_delay2" : 3500,
-    "delay_onStart" : 3000
-}
